@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
-class MessageHistoryCard extends StatelessWidget {
-  const MessageHistoryCard({Key? key}) : super(key: key);
 
+class MessageHistoryCard extends StatelessWidget {
+  final String message;
+  const MessageHistoryCard(this.message, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Card(
         child: ListTile(
-          title: Text("Codesinsider.com"),
+          title: Text(message),
         ),
         elevation: 1,
       )
