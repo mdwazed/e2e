@@ -8,7 +8,7 @@ class MessageHistoryCard extends StatelessWidget {
     return Center(
       child: Card(
         child: ListTile(
-          title: Text("Codesinsider.com"),
+          title: Text("user input"),
         ),
         elevation: 1,
       )
