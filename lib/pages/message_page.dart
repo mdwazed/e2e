@@ -1,4 +1,4 @@
-// import 'package:openpgp/openpgp.dart';
+import 'package:openpgp/openpgp.dart';
 import 'package:e2e/model/message_model.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/material.dart';
@@ -15,7 +15,7 @@ class _MessagePageState extends State<MessagePage> {
   final _controller = TextEditingController();
   final MessageList list = MessageList();
 
-  IO.Socket socket = IO.io('http://192.168.1.71:3000', <String, dynamic>{
+  IO.Socket socket = IO.io('http://192.168.0.102:3000', <String, dynamic>{
     'transports': ['websocket'],
     'autoconnect': false,
   });
@@ -23,28 +23,27 @@ class _MessagePageState extends State<MessagePage> {
   _connect() {
     print('establishing connection...');
     socket.connect();
-    print(socket);
     socket.onConnect((data) {
-      print('connected');
-      print(socket.id);
+      print('connected ${socket.id}');
     });
     socket.on('msg', (data) async {
-      // var dMsg = await OpenPGP.decryptSymmetric(
-      //   data.msg,
-      //   "thisismysupersecretkey",
-      // );
-      print('received data ${data}');
-      // print('received decrypted message ${dMsg}');
+      var dMsg = await OpenPGP.decryptSymmetric(
+        data['msg'],
+        "thisismysupersecretkey",
+      );
+      print('received message from user ${data['user']}');
+      print('received decrypted message ${dMsg}');
     });
   }
 
   void sendEncMsg(_controller) async {
-    // var encMsg = await OpenPGP.encryptSymmetric(
-    //   _controller.text, // message
-    //   "thisismysupersecretkey",
-    // );
-    socket.emit('msg', {'msg': _controller.text, 'user': socket.id});
-    // print('message encrypted sent ${encMsg}');
+    var encMsg = await OpenPGP.encryptSymmetric(
+      _controller.text, // message
+      "thisismysupersecretkey",
+    );
+    socket.emit('msg', {'msg': encMsg, 'user': socket.id});
+    print('message encrypted sent ${encMsg}');
+    _controller.text = '';
   }
 
   @override
@@ -80,9 +79,7 @@ class _MessagePageState extends State<MessagePage> {
               ),
               suffixIcon: IconButton(
                 onPressed: () {
-                  _controller.text = '';
-                  print(_controller.text);
-                  print(list.toJSONEncodable());
+                  sendEncMsg(_controller);
                 },
                 icon: const Icon(Icons.send),
               ),
