@@ -18,7 +18,10 @@ class _MessageHistoryContainerState extends State<MessageHistoryContainer> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: List.generate(widget.allMessages.messages.length, (index){
-            return MessageHistoryCard(widget.allMessages.messages[index].message);
+            return MessageHistoryCard(
+                widget.allMessages.messages[index].message,
+                widget.allMessages.messages[index].user
+            );
           }),
         ),
       ),

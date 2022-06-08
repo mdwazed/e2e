@@ -31,8 +31,10 @@ class _MessagePageState extends State<MessagePage> {
         data['msg'],
         "thisismysupersecretkey",
       );
-      print('received message from user ${data['user']}');
-      print('received decrypted message ${dMsg}');
+      print('received message data $data');
+      setState((){
+        list.messages.add(Message(message: dMsg, user: data['user']));
+      });
     });
   }
 
@@ -42,8 +44,11 @@ class _MessagePageState extends State<MessagePage> {
       "thisismysupersecretkey",
     );
     socket.emit('msg', {'msg': encMsg, 'user': socket.id});
-    print('message encrypted sent ${encMsg}');
+    print('sent encrypted message ${encMsg}');
+    // list.messages.add(Message(message: _controller.text));
+    // print(list.toJSONEncodable());
     _controller.text = '';
+
   }
 
   @override
