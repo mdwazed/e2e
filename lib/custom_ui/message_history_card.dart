@@ -3,18 +3,30 @@ import 'package:flutter/material.dart';
 
 class MessageHistoryCard extends StatelessWidget {
   final String message;
-  final String user;
-  const MessageHistoryCard(this.message, this.user, {Key? key}) : super(key: key);
+  final bool isOwnMsg;
+  const MessageHistoryCard(this.message, this.isOwnMsg, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return Center(
-        child: Card(
-          child: ListTile(
-            title: Text(message),
-            subtitle: Text(user),
-          ),
-          elevation: 1,
-        )
-    );
+    if (this.isOwnMsg) {
+      return Center(
+          child: Card(
+            child: ListTile(
+              title: Text(message, textAlign: TextAlign.right),
+            ),
+            elevation: 1,
+          )
+      );
+    } else {
+      return Center(
+          child: Card(
+            child: ListTile(
+              title: Text(message, textAlign: TextAlign.left),
+            ),
+            shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),),
+          )
+      );
+    }
+
   }
 }

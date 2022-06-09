@@ -15,7 +15,7 @@ class _MessagePageState extends State<MessagePage> {
   final _controller = TextEditingController();
   final MessageList list = MessageList();
 
-  IO.Socket socket = IO.io('http://192.168.0.102:3000', <String, dynamic>{
+  IO.Socket socket = IO.io('http://192.168.1.71:3000', <String, dynamic>{
     'transports': ['websocket'],
     'autoconnect': false,
   });
@@ -33,20 +33,27 @@ class _MessagePageState extends State<MessagePage> {
       );
       print('received message data $data');
       setState((){
-        list.messages.add(Message(message: dMsg, user: data['user']));
+        const isOwnMsg = false;
+        list.messages.add(Message(message: dMsg, sender: data['sender'], isOwnMsg: isOwnMsg),);
       });
     });
   }
 
   void sendEncMsg(_controller) async {
+    var rawMsg = _controller.text;
+    var sender = socket.id;
     var encMsg = await OpenPGP.encryptSymmetric(
-      _controller.text, // message
+      rawMsg, // message
       "thisismysupersecretkey",
     );
-    socket.emit('msg', {'msg': encMsg, 'user': socket.id});
+    socket.emit('msg', {'msg': encMsg, 'sender': sender});
     print('sent encrypted message ${encMsg}');
-    // list.messages.add(Message(message: _controller.text));
-    // print(list.toJSONEncodable());
+    setState((){
+      const isOwnMsg = true;
+      list.messages.add(
+        Message(message: rawMsg, sender: sender.toString(), isOwnMsg: isOwnMsg)
+      );
+    });
     _controller.text = '';
 
   }
@@ -55,13 +62,15 @@ class _MessagePageState extends State<MessagePage> {
   void dispose() {
     // Clean up the controller when the widget is disposed.
     _controller.dispose();
+    socket.disconnect();
+    print('disconnected');
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _connect());
+    WidgetsBinding.instance!.addPostFrameCallback((_) => _connect());
   }
 
   @override

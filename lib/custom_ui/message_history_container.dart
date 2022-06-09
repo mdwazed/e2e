@@ -12,6 +12,7 @@ class MessageHistoryContainer extends StatefulWidget {
 class _MessageHistoryContainerState extends State<MessageHistoryContainer> {
   @override
   Widget build(BuildContext context) {
+    // print('rendering history');
     return Expanded(
       child: SingleChildScrollView(
         scrollDirection: Axis.vertical,
@@ -20,7 +21,8 @@ class _MessageHistoryContainerState extends State<MessageHistoryContainer> {
           children: List.generate(widget.allMessages.messages.length, (index){
             return MessageHistoryCard(
                 widget.allMessages.messages[index].message,
-                widget.allMessages.messages[index].user
+                widget.allMessages.messages[index].isOwnMsg,
+
             );
           }),
         ),

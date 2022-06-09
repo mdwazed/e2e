@@ -1,13 +1,18 @@
+import 'dart:ffi';
+
 class Message {
   final String message;
-  final String user;
+  final String sender;
+  final bool isOwnMsg;
 
-  Message({required this.message, required this.user});
+  Message(
+      {required this.message, required this.sender, required this.isOwnMsg}
+      );
 
   toJSONEncodable() {
     Map<String, String> m = Map();
     m['text'] = message;
-    m['user'] = user;
+    m['sender'] = sender;
     return m;
   }
 }
