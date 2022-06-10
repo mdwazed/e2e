@@ -8,7 +8,8 @@ class MessageHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (this.isOwnMsg) {
-      return Center(
+      return Align(
+          alignment: Alignment.centerRight,
           child: Card(
             child: ListTile(
               title: Text(message, textAlign: TextAlign.right),
@@ -17,7 +18,8 @@ class MessageHistoryCard extends StatelessWidget {
           )
       );
     } else {
-      return Center(
+      return Align(
+          alignment: Alignment.centerLeft,
           child: Card(
             child: ListTile(
               title: Text(message, textAlign: TextAlign.left),
