@@ -14,8 +14,11 @@ class MessagePage extends StatefulWidget {
 class _MessagePageState extends State<MessagePage> {
   final _controller = TextEditingController();
   final MessageList list = MessageList();
+  String connState = "Disconnected";
 
-  IO.Socket socket = IO.io('http://192.168.1.71:3000', <String, dynamic>{
+  IO.Socket socket = IO.io(
+      'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com'
+      , <String, dynamic>{
     'transports': ['websocket'],
     'autoconnect': false,
   });
@@ -25,6 +28,7 @@ class _MessagePageState extends State<MessagePage> {
     socket.connect();
     socket.onConnect((data) {
       print('connected ${socket.id}');
+      connState = 'Connected';
     });
     socket.on('msg', (data) async {
       var dMsg = await OpenPGP.decryptSymmetric(
@@ -77,7 +81,7 @@ class _MessagePageState extends State<MessagePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Messages"),
+        title: Text("Messages $connState"),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.end,
