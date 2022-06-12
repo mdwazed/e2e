@@ -28,7 +28,11 @@ class _MessagePageState extends State<MessagePage> {
     socket.connect();
     socket.onConnect((data) {
       print('connected ${socket.id}');
-      setState((){connState = 'Connected';});
+      try{
+        setState((){connState = 'Connected';});
+      }catch(e){
+        print('\n\nError FROm STATE $e\n\n');
+      }
     });
     socket.on('msg', (data) async {
       var dMsg = await OpenPGP.decryptSymmetric(
