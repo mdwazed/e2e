@@ -17,20 +17,22 @@ class _MessagePageState extends State<MessagePage> {
   String connState = "Disconnected";
 
   IO.Socket socket = IO.io(
-      'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com'
-      , <String, dynamic>{
-    'transports': ['websocket'],
-    'autoconnect': false,
-  });
+      'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com',
+      <String, dynamic>{
+        'transports': ['websocket'],
+        'autoconnect': false,
+      });
 
   _connect() {
     print('establishing connection...');
     socket.connect();
     socket.onConnect((data) {
       print('connected ${socket.id}');
-      try{
-        setState((){connState = 'Connected';});
-      }catch(e){
+      try {
+        setState(() {
+          connState = 'Connected';
+        });
+      } catch (e) {
         print('\n\nError FROm STATE $e\n\n');
       }
     });
@@ -40,9 +42,16 @@ class _MessagePageState extends State<MessagePage> {
         "thisismysupersecretkey",
       );
       print('received message data $data');
-      setState((){
+      setState(() {
         const isOwnMsg = false;
-        list.messages.add(Message(message: dMsg, sender: data['sender'], isOwnMsg: isOwnMsg),);
+        list.messages.add(
+          Message(
+            message: dMsg,
+            encryptedMsg: data['msg'],
+            sender: data['sender'],
+            isOwnMsg: isOwnMsg,
+          ),
+        );
       });
     });
   }
@@ -56,14 +65,17 @@ class _MessagePageState extends State<MessagePage> {
     );
     socket.emit('msg', {'msg': encMsg, 'sender': sender});
     print('sent encrypted message ${encMsg}');
-    setState((){
+    setState(() {
       const isOwnMsg = true;
       list.messages.add(
-        Message(message: rawMsg, sender: sender.toString(), isOwnMsg: isOwnMsg)
+        Message(
+            message: rawMsg,
+            encryptedMsg: encMsg,
+            sender: sender.toString(),
+            isOwnMsg: isOwnMsg),
       );
     });
     _controller.text = '';
-
   }
 
   @override

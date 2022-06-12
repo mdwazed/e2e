@@ -4,9 +4,12 @@ import 'message_history_card.dart';
 
 class MessageHistoryContainer extends StatefulWidget {
   final MessageList allMessages;
+
   const MessageHistoryContainer(this.allMessages, {Key? key}) : super(key: key);
+
   @override
-  State<MessageHistoryContainer> createState() => _MessageHistoryContainerState();
+  State<MessageHistoryContainer> createState() =>
+      _MessageHistoryContainerState();
 }
 
 class _MessageHistoryContainerState extends State<MessageHistoryContainer> {
@@ -18,11 +21,11 @@ class _MessageHistoryContainerState extends State<MessageHistoryContainer> {
         scrollDirection: Axis.vertical,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
-          children: List.generate(widget.allMessages.messages.length, (index){
+          children: List.generate(widget.allMessages.messages.length, (index) {
             return MessageHistoryCard(
-                widget.allMessages.messages[index].message,
-                widget.allMessages.messages[index].isOwnMsg,
-
+              widget.allMessages.messages[index].message,
+              widget.allMessages.messages[index].isOwnMsg,
+              widget.allMessages.messages[index].encryptedMsg,
             );
           }),
         ),
