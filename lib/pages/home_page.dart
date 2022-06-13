@@ -1,3 +1,4 @@
+import 'package:e2e/pages/call_page.dart';
 import "package:flutter/material.dart";
 
 import 'chat_page.dart';
@@ -66,7 +67,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         controller: _controller,
         children: const [
           ChatPage(),
-          Text("Call"),
+          Call(),
           Text("video"),
         ],
       ),

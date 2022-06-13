@@ -38,6 +38,7 @@ dependencies:
   openpgp: 2.0.1
   flutter_chat_bubble: 2.0.0
   expandable: ^5.0.1
+  flutter_webrtc: ^0.8.9
 
 dev_dependencies:
   flutter_test:
