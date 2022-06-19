@@ -9,10 +9,6 @@ class RecentContactCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: () {
-
-
-
-
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const MessagePage()),

@@ -1,15 +1,16 @@
+import 'package:e2e/pages/video_call.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-class Call extends StatefulWidget {
-  const Call({Key? key}) : super(key: key);
+class VideoCallPage extends StatefulWidget {
+  const VideoCallPage({Key? key}) : super(key: key);
 
   @override
-  State<Call> createState() => _CallState();
+  State<VideoCallPage> createState() => _VideoCallPageState();
 }
 
-class _CallState extends State<Call> {
+class _VideoCallPageState extends State<VideoCallPage> {
   List users = [];
   IO.Socket socket = IO.io(
       'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com',
@@ -62,9 +63,19 @@ class _CallState extends State<Call> {
                 children: [
                   Text('User ${users[index]}'),
                   GestureDetector(
-                    onTap: (){},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => VideoCall(
+                            userID: users[index],
+                            title: 'title',
+                          ),
+                        ),
+                      );
+                    },
                     child: const Icon(
-                      Icons.call,
+                      Icons.video_call,
                     ),
                   ),
                 ],
