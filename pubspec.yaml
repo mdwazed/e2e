@@ -39,6 +39,7 @@ dependencies:
   flutter_chat_bubble: 2.0.0
   expandable: ^5.0.1
   flutter_webrtc: ^0.8.9
+  sdp_transform: ^0.3.2
 
 dev_dependencies:
   flutter_test:
