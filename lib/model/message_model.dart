@@ -1,4 +1,3 @@
-import 'dart:ffi';
 
 class Message {
   final String message;

@@ -1,4 +1,3 @@
-import 'package:e2e/pages/video_call.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:sdp_transform/sdp_transform.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -22,10 +21,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
   bool _offer = false;
   bool _candidateSent = false;
 
-  IO.Socket socket = IO.io('http://192.168.0.102:3000/', <String, dynamic>{
-    'transports': ['websocket'],
-    'autoconnect': false,
-  });
+  IO.Socket socket = IO.io(
+      'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com',
+      <String, dynamic>{
+        'transports': ['websocket'],
+        'autoconnect': false,
+      });
 
   _connect() {
     print('establishing connection...');
@@ -33,7 +34,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     socket.onConnect((data) {
       print('connected ${socket.id}');
     });
-    socket.on('message', (data) async {
+    socket.on('msg', (data) async {
       if (data['type'] == 'answer' || data['type'] == 'offer') {
         setState(() {
           _offer = data['type'] == 'offer' ? true : false;
@@ -88,14 +89,14 @@ class _VideoCallPageState extends State<VideoCallPage> {
     _localStream = await _getUserMedia();
 
     RTCPeerConnection pc =
-    await createPeerConnection(configuration, offerSdpConstraints);
+        await createPeerConnection(configuration, offerSdpConstraints);
 
     pc.addStream(_localStream!);
 
     pc.onIceCandidate = (e) {
       print(e.toMap());
       if (e.candidate != null && !_candidateSent && _offer) {
-        socket.emit('message', {
+        socket.emit('msg', {
           'type': 'candidate',
           'candidate': {
             'sdpMLineIndex': e.sdpMLineIndex,
@@ -123,7 +124,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   _getUserMedia() async {
     final Map<String, dynamic> constraints = {
-      'audio': false,
+      'audio': true,
       'video': {
         'facingMode': 'user',
       },
@@ -139,20 +140,20 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   void _createOffer() async {
     RTCSessionDescription description =
-    await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
+        await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
     // print(json.encode(session));
     print("Offer Created ...");
-    socket.emit('message', {'type': 'offer', 'sdp': session});
+    socket.emit('msg', {'type': 'offer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
   }
 
   void _createAnswer() async {
     print("Answer Created ...");
     RTCSessionDescription description =
-    await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
+        await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
-    socket.emit('message', {'type': 'answer', 'sdp': session});
+    socket.emit('msg', {'type': 'answer', 'sdp': session});
     _peerConnection?.setLocalDescription(description);
   }
 
@@ -207,10 +208,10 @@ class _VideoCallPageState extends State<VideoCallPage> {
     return Scaffold(
         body: Container(
             child: Column(
-              children: [
-                videoRenderers(),
-                offerAndAnswerButtons(),
-              ],
-            )));
+      children: [
+        videoRenderers(),
+        offerAndAnswerButtons(),
+      ],
+    )));
   }
 }
