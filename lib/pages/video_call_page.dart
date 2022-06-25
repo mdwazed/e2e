@@ -1,7 +1,6 @@
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:sdp_transform/sdp_transform.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class VideoCallPage extends StatefulWidget {
@@ -16,10 +15,10 @@ class _VideoCallPageState extends State<VideoCallPage> {
   MediaStream? _localStream;
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-
   final sdpController = TextEditingController();
   bool _offer = false;
   bool _candidateSent = false;
+  List logList = [];
 
   IO.Socket socket = IO.io(
       'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com',
@@ -29,17 +28,22 @@ class _VideoCallPageState extends State<VideoCallPage> {
       });
 
   _connect() {
-    print('establishing connection...');
+    setState(() {
+      logList.insert(0, 'establishing connection...');
+    });
     socket.connect();
     socket.onConnect((data) {
-      print('connected ${socket.id}');
+      setState(() {
+        logList.insert(0, 'connected ${socket.id}');
+      });
     });
     socket.on('msg', (data) async {
       if (data['type'] == 'answer' || data['type'] == 'offer') {
         setState(() {
           _offer = data['type'] == 'offer' ? true : false;
+          logList.insert(
+              0, data['type'] == 'offer' ? 'Incoming Call' : 'Replied to Call');
         });
-        print("\ncalling _setRemoteDescription ${data['type']}\n");
         _setRemoteDescription(data['sdp'], data['type']);
       } else if (data['type'] == 'candidate' && !_offer) {
         _addCandidate(data['candidate']);
@@ -94,7 +98,6 @@ class _VideoCallPageState extends State<VideoCallPage> {
     pc.addStream(_localStream!);
 
     pc.onIceCandidate = (e) {
-      print(e.toMap());
       if (e.candidate != null && !_candidateSent && _offer) {
         socket.emit('msg', {
           'type': 'candidate',
@@ -111,11 +114,13 @@ class _VideoCallPageState extends State<VideoCallPage> {
     };
 
     pc.onIceConnectionState = (e) {
-      print("onIceConnectionState ${e}");
+      setState(() {
+        logList.insert(0, "onIceConnectionState ${e}");
+      });
     };
 
     pc.onAddStream = (stream) {
-      print('addStream: ' + stream.id);
+      logList.insert(0, 'addStream: ' + stream.id);
       _remoteRenderer.srcObject = stream;
     };
 
@@ -142,14 +147,17 @@ class _VideoCallPageState extends State<VideoCallPage> {
     RTCSessionDescription description =
         await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
-    // print(json.encode(session));
-    print("Offer Created ...");
+    setState(() {
+      logList.insert(0, "Calling The Connected User");
+    });
     socket.emit('msg', {'type': 'offer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
   }
 
   void _createAnswer() async {
-    print("Answer Created ...");
+    setState(() {
+      logList.insert(0, "Replying Answer for incoming call");
+    });
     RTCSessionDescription description =
         await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
@@ -167,7 +175,9 @@ class _VideoCallPageState extends State<VideoCallPage> {
     dynamic candidate = RTCIceCandidate(
         session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
     await _peerConnection!.addCandidate(candidate);
-    print("ice candidate added ${session['candidate']}");
+    setState(() {
+      logList.insert(0, "ice candidate added");
+    });
   }
 
   SizedBox videoRenderers() => SizedBox(
@@ -191,14 +201,13 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   Row offerAndAnswerButtons() =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
-        ElevatedButton(
+        !_offer? ElevatedButton(
           onPressed: _createOffer,
-          child: Text('Offer'),
+          child: const Text('Call'),
           // color: Colors.amber,
-        ),
-        ElevatedButton(
+        ): ElevatedButton(
           onPressed: _createAnswer,
-          child: Text('Answer'),
+          child: const Text('Answer'),
           style: ElevatedButton.styleFrom(primary: Colors.amber),
         ),
       ]);
@@ -211,6 +220,23 @@ class _VideoCallPageState extends State<VideoCallPage> {
       children: [
         videoRenderers(),
         offerAndAnswerButtons(),
+        Container(
+          margin: const EdgeInsets.only(top: 20),
+          height: 250,
+          width: MediaQuery.of(context).size.width - 50,
+          color: Colors.black,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              children: List.generate(logList.length, (index) {
+                return Text(
+                  logList[index],
+                  style: const TextStyle(color: Colors.white),
+                );
+              }),
+            ),
+          ),
+        ),
       ],
     )));
   }
