@@ -29,12 +29,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   _connect() {
     setState(() {
-      logList.insert(0, 'establishing connection...');
+      logList.add('establishing connection...');
     });
     socket.connect();
     socket.onConnect((data) {
       setState(() {
-        logList.insert(0, 'connected ${socket.id}');
+        logList.add('connected ${socket.id}');
       });
     });
     socket.on('msg', (data) async {
@@ -79,6 +79,21 @@ class _VideoCallPageState extends State<VideoCallPage> {
     Map<String, dynamic> configuration = {
       "iceServers": [
         {"url": "stun:stun.l.google.com:19302"},
+        {
+          "urls": "turn:openrelay.metered.ca:80",
+          "username": "openrelayproject",
+          "credential": "openrelayproject",
+        },
+        {
+          "urls": "turn:openrelay.metered.ca:443",
+          "username": "openrelayproject",
+          "credential": "openrelayproject",
+        },
+        {
+          "urls": "turn:openrelay.metered.ca:443?transport=tcp",
+          "username": "openrelayproject",
+          "credential": "openrelayproject",
+        },
       ]
     };
 
@@ -115,12 +130,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
     pc.onIceConnectionState = (e) {
       setState(() {
-        logList.insert(0, "onIceConnectionState ${e}");
+        logList.add("onIceConnectionState ${e}");
       });
     };
 
     pc.onAddStream = (stream) {
-      logList.insert(0, 'addStream: ' + stream.id);
+      logList.add('addStream: ' + stream.id);
       _remoteRenderer.srcObject = stream;
     };
 
@@ -148,7 +163,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
         await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
     setState(() {
-      logList.insert(0, "Calling The Connected User");
+      logList.add("Calling The Connected User");
     });
     socket.emit('msg', {'type': 'offer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
@@ -156,7 +171,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   void _createAnswer() async {
     setState(() {
-      logList.insert(0, "Replying Answer for incoming call");
+      logList.add("Replying Answer for incoming call");
     });
     RTCSessionDescription description =
         await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
@@ -176,7 +191,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
         session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
     await _peerConnection!.addCandidate(candidate);
     setState(() {
-      logList.insert(0, "ice candidate added");
+      logList.add("ice candidate added");
     });
   }
 
@@ -201,15 +216,17 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   Row offerAndAnswerButtons() =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
-        !_offer? ElevatedButton(
-          onPressed: _createOffer,
-          child: const Text('Call'),
-          // color: Colors.amber,
-        ): ElevatedButton(
-          onPressed: _createAnswer,
-          child: const Text('Answer'),
-          style: ElevatedButton.styleFrom(primary: Colors.amber),
-        ),
+        !_offer
+            ? ElevatedButton(
+                onPressed: _createOffer,
+                child: const Text('Call'),
+                // color: Colors.amber,
+              )
+            : ElevatedButton(
+                onPressed: _createAnswer,
+                child: const Text('Answer'),
+                style: ElevatedButton.styleFrom(primary: Colors.amber),
+              ),
       ]);
 
   @override
@@ -226,7 +243,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
           width: MediaQuery.of(context).size.width - 50,
           color: Colors.black,
           child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+            scrollDirection: Axis.vertical,
             child: Column(
               children: List.generate(logList.length, (index) {
                 return Text(

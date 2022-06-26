@@ -83,6 +83,21 @@ class _AudioCallPageState extends State<AudioCallPage> {
     Map<String, dynamic> configuration = {
       "iceServers": [
         {"url": "stun:stun.l.google.com:19302"},
+        {
+          "urls": "turn:openrelay.metered.ca:80",
+          "username": "openrelayproject",
+          "credential": "openrelayproject",
+        },
+        {
+          "urls": "turn:openrelay.metered.ca:443",
+          "username": "openrelayproject",
+          "credential": "openrelayproject",
+        },
+        {
+          "urls": "turn:openrelay.metered.ca:443?transport=tcp",
+          "username": "openrelayproject",
+          "credential": "openrelayproject",
+        },
       ]
     };
 
@@ -230,12 +245,12 @@ class _AudioCallPageState extends State<AudioCallPage> {
           width: MediaQuery.of(context).size.width - 50,
           color: Colors.black,
           child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+            scrollDirection: Axis.vertical,
             child: Column(
               children: List.generate(logList.length, (index) {
                 return Text(
                   logList[index],
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white, ),
                 );
               }),
             ),
