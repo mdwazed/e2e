@@ -1,7 +1,6 @@
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:sdp_transform/sdp_transform.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class AudioCallPage extends StatefulWidget {
@@ -66,7 +65,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
   @override
   void initState() {
     initRenderer();
-    _createPeerConnecion().then((pc) {
+    _createPeerConnection().then((pc) {
       _peerConnection = pc;
     });
     // _getUserMedia();
@@ -79,7 +78,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
     await _remoteRenderer.initialize();
   }
 
-  _createPeerConnecion() async {
+  _createPeerConnection() async {
     Map<String, dynamic> configuration = {
       "iceServers": [
         {"url": "stun:stun.l.google.com:19302"},
@@ -110,14 +109,16 @@ class _AudioCallPageState extends State<AudioCallPage> {
     };
 
     _localStream = await _getUserMedia();
+    // _localStream?.getAudioTracks().first.enableSpeakerphone(true);
 
     RTCPeerConnection pc =
         await createPeerConnection(configuration, offerSdpConstraints);
 
     pc.addStream(_localStream!);
+    print('onIceCandidate connection state: ${pc.connectionState}');
 
     pc.onIceCandidate = (e) {
-      print(e.toMap());
+      print('onIceCandidate connection state: ${pc.connectionState}');
       if (e.candidate != null && !_candidateSent && _offer) {
         socket.emit('msg', {
           'type': 'candidate',
@@ -134,12 +135,14 @@ class _AudioCallPageState extends State<AudioCallPage> {
     };
 
     pc.onIceConnectionState = (e) {
+      print('onIceConnectionState connection state: ${pc.connectionState}');
       setState(() {
         logList.add('IceConnectionState: ${e}');
       });
     };
 
     pc.onAddStream = (stream) {
+      print('onAddStream connection state: ${pc.connectionState}');
       setState(() {
         logList.add('Remote stream added Stream ID ' + stream.id);
       });

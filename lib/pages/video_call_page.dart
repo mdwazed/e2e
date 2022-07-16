@@ -106,6 +106,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     };
 
     _localStream = await _getUserMedia();
+    _localStream?.getAudioTracks()?.first.enableSpeakerphone(true);
 
     RTCPeerConnection pc =
         await createPeerConnection(configuration, offerSdpConstraints);
@@ -137,6 +138,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     pc.onAddStream = (stream) {
       logList.add('addStream: ' + stream.id);
       _remoteRenderer.srcObject = stream;
+
     };
 
     return pc;
@@ -148,13 +150,15 @@ class _VideoCallPageState extends State<VideoCallPage> {
       'video': {
         'facingMode': 'user',
       },
+      'volume': 100.0,
     };
 
     MediaStream stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     _localRenderer.srcObject = stream;
     // _localRenderer.mirror = true;
-
+    _localStream?.getAudioTracks()?.first?.enableSpeakerphone(true);
+    print('_localStream?.getAudioTracks()?.first ${_localStream?.getAudioTracks()?.first}');
     return stream;
   }
 
