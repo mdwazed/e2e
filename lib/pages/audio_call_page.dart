@@ -59,6 +59,9 @@ class _AudioCallPageState extends State<AudioCallPage> {
     socket.on('msg', (data) async {
       if(data['type'] == 'offer') {
         _setRemoteDescription(data['sdp'], data['type']);
+        setState(() {
+          _offer = data['type'] == 'offer' ? true : false;
+        });
         _createAnswer();
       }else if(data['type'] == 'answer') {
         _setRemoteDescription(data['sdp'], data['type']);
@@ -132,7 +135,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
     pc.onIceCandidate = (e) {
       print(e.toMap());
-      if (e.candidate != null && !_candidateSent && _offer) {
+      if (e.candidate != null) {
         socket.emit('msg', {
           'type': 'candidate',
           'candidate': {
