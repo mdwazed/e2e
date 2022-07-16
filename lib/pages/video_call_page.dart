@@ -67,7 +67,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     });
     // _getUserMedia();
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _connect());
+    WidgetsBinding.instance?.addPostFrameCallback((_) => _connect());
   }
 
   initRenderer() async {

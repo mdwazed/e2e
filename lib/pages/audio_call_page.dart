@@ -29,6 +29,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
         'autoconnect': false,
       });
 
+
+  // conenct to socket
   _connect() {
     setState(() {
       logList.add('establishing connection...');
@@ -39,20 +41,32 @@ class _AudioCallPageState extends State<AudioCallPage> {
         logList.add('connected ${socket.id}');
       });
     });
+    // socket.on('msg', (data) async {
+    //   if (data['type'] == 'answer' || data['type'] == 'offer') {
+    //     setState(() {
+    //       _offer = data['type'] == 'offer' ? true : false;
+    //       logList.add(data['type'] == 'offer' ? 'Incoming Call' : 'User Joined To Call');
+    //     });
+    //     _setRemoteDescription(data['sdp'], data['type']);
+    //   } else if (data['type'] == 'candidate' && !_offer) {
+    //     _addCandidate(data['candidate']);
+    //     setState(() {
+    //       logList.add('Candidate set from ${socket.id}');
+    //     });
+    //   }
+    // });
+
     socket.on('msg', (data) async {
-      if (data['type'] == 'answer' || data['type'] == 'offer') {
-        setState(() {
-          _offer = data['type'] == 'offer' ? true : false;
-          logList.add(data['type'] == 'offer' ? 'Incoming Call' : 'User Joined To Call');
-        });
+      if(data['type'] == 'offer') {
         _setRemoteDescription(data['sdp'], data['type']);
-      } else if (data['type'] == 'candidate' && !_offer) {
+        _createAnswer();
+      }else if(data['type'] == 'answer') {
+        _setRemoteDescription(data['sdp'], data['type']);
+      }else if (data['type'] == 'candidate') {
         _addCandidate(data['candidate']);
-        setState(() {
-          logList.add('Candidate set from ${socket.id}');
-        });
       }
-    });
+    }
+    );
   }
 
   @override
@@ -71,7 +85,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
     });
     // _getUserMedia();
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _connect());
+    WidgetsBinding.instance?.addPostFrameCallback((_) => _connect());
   }
 
   initRenderer() async {
