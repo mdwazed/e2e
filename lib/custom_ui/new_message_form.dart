@@ -45,7 +45,7 @@ class _NewMessageFormState extends State<NewMessageForm> {
 
   void initState() {
     super.initState();
-    WidgetsBinding.instance?.addPostFrameCallback((_) => _connect());
+    _connect();
   }
 
   @override

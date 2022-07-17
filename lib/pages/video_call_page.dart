@@ -62,12 +62,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
   @override
   void initState() {
     initRenderer();
+    _connect();
     _createPeerConnecion().then((pc) {
       _peerConnection = pc;
     });
     // _getUserMedia();
     super.initState();
-    WidgetsBinding.instance?.addPostFrameCallback((_) => _connect());
   }
 
   initRenderer() async {

@@ -21,6 +21,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
   bool _offer = false;
   bool _candidateSent = false;
   List logList = [];
+  bool _clickedCall = false;
+  bool _clickedCAnswer = false;
 
   IO.Socket socket = IO.io(
       'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com',
@@ -28,7 +30,6 @@ class _AudioCallPageState extends State<AudioCallPage> {
         'transports': ['websocket'],
         'autoconnect': false,
       });
-
 
   // conenct to socket
   _connect() {
@@ -41,42 +42,43 @@ class _AudioCallPageState extends State<AudioCallPage> {
         logList.add('connected ${socket.id}');
       });
     });
-    // socket.on('msg', (data) async {
-    //   if (data['type'] == 'answer' || data['type'] == 'offer') {
-    //     setState(() {
-    //       _offer = data['type'] == 'offer' ? true : false;
-    //       logList.add(data['type'] == 'offer' ? 'Incoming Call' : 'User Joined To Call');
-    //     });
-    //     _setRemoteDescription(data['sdp'], data['type']);
-    //   } else if (data['type'] == 'candidate' && !_offer) {
-    //     _addCandidate(data['candidate']);
-    //     setState(() {
-    //       logList.add('Candidate set from ${socket.id}');
-    //     });
-    //   }
-    // });
 
     socket.on('msg', (data) async {
-      if(data['type'] == 'offer') {
+      if (data['type'] == 'offer') {
         _setRemoteDescription(data['sdp'], data['type']);
         setState(() {
           _offer = data['type'] == 'offer' ? true : false;
         });
-        _createAnswer();
-      }else if(data['type'] == 'answer') {
+        if (_clickedCAnswer) {
+          _createAnswer();
+          setState(() {
+            _clickedCAnswer = false;
+          });
+        }
+      } else if (data['type'] == 'answer') {
         _setRemoteDescription(data['sdp'], data['type']);
-      }else if (data['type'] == 'candidate') {
+        if (_clickedCall) {
+          _createOffer();
+          setState(() {
+            _clickedCall = false;
+          });
+        }
+      } else if (data['type'] == 'candidate' && !_offer) {
         _addCandidate(data['candidate']);
       }
-    }
-    );
+    });
+  }
+
+  _closeConnection() {
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
+    socket.disconnect();
+    _peerConnection?.close();
   }
 
   @override
   dispose() {
-    _localRenderer.dispose();
-    _remoteRenderer.dispose();
-    socket.disconnect();
+    _closeConnection();
     super.dispose();
   }
 
@@ -87,8 +89,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
       _peerConnection = pc;
     });
     // _getUserMedia();
+    _connect();
     super.initState();
-    WidgetsBinding.instance?.addPostFrameCallback((_) => _connect());
   }
 
   initRenderer() async {
@@ -99,7 +101,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
   _createPeerConnecion() async {
     Map<String, dynamic> configuration = {
       "iceServers": [
-        {"url": "stun:stun.l.google.com:19302"},
+        // {"url": "stun:stun.l.google.com:19302"},
         {
           "urls": "turn:openrelay.metered.ca:80",
           "username": "openrelayproject",
@@ -134,8 +136,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
     pc.addStream(_localStream!);
 
     pc.onIceCandidate = (e) {
-      print(e.toMap());
-      if (e.candidate != null) {
+      if (e.candidate != null && !_candidateSent && _offer) {
         socket.emit('msg', {
           'type': 'candidate',
           'candidate': {
@@ -152,14 +153,20 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
     pc.onIceConnectionState = (e) {
       setState(() {
-        logList.add('IceConnectionState: ${e}');
+        if (e.name.toString() == "RTCIceConnectionStateChecking") {
+          logList.add('Connecting...');
+        }
+        if (e.name.toString() == "RTCIceConnectionStateConnected") {
+          logList.add('Connected');
+        }
+        if (e.name.toString() == "RTCIceConnectionStateDisconnected") {
+          logList.add('Disconnected');
+        }
       });
+      print('iceConnectionState ${e.name.toString()}');
     };
 
     pc.onAddStream = (stream) {
-      setState(() {
-        logList.add('Remote stream added Stream ID ' + stream.id);
-      });
       _remoteRenderer.srcObject = stream;
     };
 
@@ -183,22 +190,18 @@ class _AudioCallPageState extends State<AudioCallPage> {
         await _peerConnection!.createOffer({'offerToReceiveAudio': 1});
     var session = parse(description.sdp.toString());
     // print(json.encode(session));
-    setState(() {
-      logList.add('Calling...');
-    });
     socket.emit('msg', {'type': 'offer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
+
   }
 
   void _createAnswer() async {
-    setState(() {
-      logList.add('Joining to the call...');
-    });
     RTCSessionDescription description =
         await _peerConnection!.createAnswer({'offerToReceiveAudio': 1});
     var session = parse(description.sdp.toString());
     socket.emit('msg', {'type': 'answer', 'sdp': session});
     _peerConnection?.setLocalDescription(description);
+
   }
 
   void _setRemoteDescription(receivedSdp, type) async {
@@ -211,69 +214,61 @@ class _AudioCallPageState extends State<AudioCallPage> {
     dynamic candidate = RTCIceCandidate(
         session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
     await _peerConnection!.addCandidate(candidate);
-   setState(() {
-      logList.add('IC Candidate Added');
-    });
   }
-
-  SizedBox videoRenderers() => SizedBox(
-      height: 210,
-      child: Row(children: [
-        Flexible(
-          child: Container(
-              key: const Key("local"),
-              margin: const EdgeInsets.fromLTRB(5.0, 5.0, 5.0, 5.0),
-              decoration: const BoxDecoration(color: Colors.black),
-              child: RTCVideoView(_localRenderer)),
-        ),
-        Flexible(
-          child: Container(
-              key: const Key("remote"),
-              margin: const EdgeInsets.fromLTRB(5.0, 5.0, 5.0, 5.0),
-              decoration: const BoxDecoration(color: Colors.black),
-              child: RTCVideoView(_remoteRenderer)),
-        )
-      ]));
 
   Row offerAndAnswerButtons() =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
-        !_offer? ElevatedButton(
-          onPressed: _createOffer,
-          child: const Text('Call'),
-          // color: Colors.amber,
-        ): ElevatedButton(
-          onPressed: _createAnswer,
-          child: const Text('Answer'),
-          style: ElevatedButton.styleFrom(primary: Colors.amber),
-        ),
+        !_offer
+            ? ElevatedButton(
+                onPressed: () {
+                  _createOffer();
+                  setState(() {
+                    _clickedCall = true;
+                  });
+                },
+                child: const Text('Call'),
+                // color: Colors.amber,
+              )
+            : ElevatedButton(
+                onPressed: () {
+                  _createAnswer();
+                  setState(() {
+                    _clickedCAnswer = true;
+                  });
+                },
+                child: const Text('Answer'),
+                style: ElevatedButton.styleFrom(primary: Colors.amber),
+              ),
       ]);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: Container(
+            margin: const EdgeInsets.only(top: 30),
             child: Column(
-      children: [
-        videoRenderers(),
-        offerAndAnswerButtons(),
-        Container(
-          margin: const EdgeInsets.only(top: 20),
-          height: 250,
-          width: MediaQuery.of(context).size.width - 50,
-          color: Colors.black,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: Column(
-              children: List.generate(logList.length, (index) {
-                return Text(
-                  logList[index],
-                  style: const TextStyle(color: Colors.white, ),
-                );
-              }),
-            ),
-          ),
-        ),
-      ],
-    )));
+              children: [
+                offerAndAnswerButtons(),
+                Container(
+                  margin: const EdgeInsets.only(top: 20),
+                  height: 350,
+                  width: MediaQuery.of(context).size.width - 50,
+                  color: Colors.black,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    child: Column(
+                      children: List.generate(logList.length, (index) {
+                        return Text(
+                          logList[index],
+                          style: const TextStyle(
+                            color: Colors.white,
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ],
+            )));
   }
 }
