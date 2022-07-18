@@ -1,5 +1,4 @@
 import 'package:e2e/pages/audio_call_page.dart';
-import 'package:e2e/pages/video_call_page.dart';
 import "package:flutter/material.dart";
 
 import 'chat_page.dart';
@@ -16,7 +15,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _controller = TabController(length: 3, vsync: this, initialIndex: 0);
+    _controller = TabController(length: 2, vsync: this, initialIndex: 0);
   }
   @override
   Widget build(BuildContext context) {
@@ -58,9 +57,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             Tab(
               text: "Calls",
             ),
-            Tab(
-              text: "Video",
-            )
           ],
         ),
       ),
@@ -69,7 +65,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         children: const [
           ChatPage(),
           AudioCallPage(),
-          VideoCallPage(),
+          // Padding(padding: EdgeInsets.all(0),)
         ],
       ),
     );

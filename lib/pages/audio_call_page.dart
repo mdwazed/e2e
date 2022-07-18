@@ -101,7 +101,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
   _createPeerConnecion() async {
     Map<String, dynamic> configuration = {
       "iceServers": [
-        // {"url": "stun:stun.l.google.com:19302"},
+        {"url": "stun:stun.l.google.com:19302"},
         {
           "urls": "turn:openrelay.metered.ca:80",
           "username": "openrelayproject",
