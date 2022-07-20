@@ -40,6 +40,8 @@ dependencies:
   expandable: ^5.0.1
   flutter_webrtc: ^0.8.9
   sdp_transform: ^0.3.2
+  flutter_ringtone_player: ^3.2.0
+  wakelock: ^0.6.2
 
 dev_dependencies:
   flutter_test:

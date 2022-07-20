@@ -1,8 +1,10 @@
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:sdp_transform/sdp_transform.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:wakelock/wakelock.dart';
 
 class AudioCallPage extends StatefulWidget {
   const AudioCallPage({Key? key}) : super(key: key);
@@ -17,8 +19,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
 
-  final sdpController = TextEditingController();
   bool _offer = false;
+  bool _connected = false;
   bool _candidateSent = false;
   List logList = [];
   bool _clickedCall = false;
@@ -54,6 +56,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
           setState(() {
             _clickedCAnswer = false;
           });
+        }else {
+          FlutterRingtonePlayer.playRingtone(volume: 10.0);
         }
       } else if (data['type'] == 'answer') {
         _setRemoteDescription(data['sdp'], data['type']);
@@ -65,31 +69,46 @@ class _AudioCallPageState extends State<AudioCallPage> {
         }
       } else if (data['type'] == 'candidate' && !_offer) {
         _addCandidate(data['candidate']);
+      } else if (data['type'] == 'disconnect') {
+        _disconnect();
       }
     });
   }
 
-  _closeConnection() {
+  _disconnect() {
+    setState(() {
+      _offer = false;
+      _connected = false;
+      _candidateSent = false;
+      logList = ['Call Disconnected By User'];
+      _clickedCall = false;
+      _clickedCAnswer = false;
+    });
     _localRenderer.dispose();
     _remoteRenderer.dispose();
-    socket.disconnect();
+    // socket.disconnect();
     _peerConnection?.close();
+    _createPeerConnection().then((pc) {
+      _peerConnection = pc;
+    });
   }
 
   @override
   dispose() {
-    _closeConnection();
+    _disconnect();
+    Wakelock.disable();
     super.dispose();
   }
 
   @override
   void initState() {
     initRenderer();
-    _createPeerConnecion().then((pc) {
+    _createPeerConnection().then((pc) {
       _peerConnection = pc;
     });
     // _getUserMedia();
     _connect();
+    Wakelock.enable();
     super.initState();
   }
 
@@ -98,10 +117,10 @@ class _AudioCallPageState extends State<AudioCallPage> {
     await _remoteRenderer.initialize();
   }
 
-  _createPeerConnecion() async {
+  _createPeerConnection() async {
     Map<String, dynamic> configuration = {
       "iceServers": [
-        {"url": "stun:stun.l.google.com:19302"},
+        // {"url": "stun:stun.l.google.com:19302"},
         {
           "urls": "turn:openrelay.metered.ca:80",
           "username": "openrelayproject",
@@ -154,16 +173,17 @@ class _AudioCallPageState extends State<AudioCallPage> {
     pc.onIceConnectionState = (e) {
       setState(() {
         if (e.name.toString() == "RTCIceConnectionStateChecking") {
-          logList.add('Connecting...');
+          logList.add('Trying to connect call...');
         }
         if (e.name.toString() == "RTCIceConnectionStateConnected") {
-          logList.add('Connected');
+          logList.add('Connected..!');
+          _connected = true;
         }
         if (e.name.toString() == "RTCIceConnectionStateDisconnected") {
-          logList.add('Disconnected');
+          logList.add('Disconnected :( ');
+          _connected = false;
         }
       });
-      print('iceConnectionState ${e.name.toString()}');
     };
 
     pc.onAddStream = (stream) {
@@ -192,7 +212,6 @@ class _AudioCallPageState extends State<AudioCallPage> {
     // print(json.encode(session));
     socket.emit('msg', {'type': 'offer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
-
   }
 
   void _createAnswer() async {
@@ -201,7 +220,6 @@ class _AudioCallPageState extends State<AudioCallPage> {
     var session = parse(description.sdp.toString());
     socket.emit('msg', {'type': 'answer', 'sdp': session});
     _peerConnection?.setLocalDescription(description);
-
   }
 
   void _setRemoteDescription(receivedSdp, type) async {
@@ -218,27 +236,43 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
   Row offerAndAnswerButtons() =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
-        !_offer
+        _connected
             ? ElevatedButton(
                 onPressed: () {
-                  _createOffer();
-                  setState(() {
-                    _clickedCall = true;
+                  _disconnect();
+                  socket.emit('msg', {
+                    'type': 'disconnect',
                   });
                 },
-                child: const Text('Call'),
-                // color: Colors.amber,
+                child: const Text(
+                  'Disconnect',
+                ),
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.red,
+                ),
               )
-            : ElevatedButton(
-                onPressed: () {
-                  _createAnswer();
-                  setState(() {
-                    _clickedCAnswer = true;
-                  });
-                },
-                child: const Text('Answer'),
-                style: ElevatedButton.styleFrom(primary: Colors.amber),
-              ),
+            : !_offer
+                ? ElevatedButton(
+                    onPressed: () {
+                      _createOffer();
+                      setState(() {
+                        _clickedCall = true;
+                      });
+                    },
+                    child: const Text('Call'),
+                    // color: Colors.amber,
+                  )
+                : ElevatedButton(
+                    onPressed: () {
+                      _createAnswer();
+                      setState(() {
+                        _clickedCAnswer = true;
+                      });
+                      FlutterRingtonePlayer.stop();
+                    },
+                    child: const Text('Answer'),
+                    style: ElevatedButton.styleFrom(primary: Colors.amber),
+                  ),
       ]);
 
   @override
