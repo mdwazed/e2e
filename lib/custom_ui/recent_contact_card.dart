@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../pages/message_page.dart';
 
 class RecentContactCard extends StatelessWidget {
-  const RecentContactCard({Key? key}) : super(key: key);
+  final String username;
+  const RecentContactCard({Key? key, required this.username}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +19,7 @@ class RecentContactCard extends StatelessWidget {
         radius: 25,
       ),
       title: Text(
-        "wazed",
+        username,
         style: Theme.of(context).textTheme.headline6,
       ),
       subtitle: Text(

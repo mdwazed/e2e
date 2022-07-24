@@ -9,15 +9,12 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  final List<String> userList = ['Wazed', 'Jhone', 'Bob'];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
-        children: const [
-          RecentContactCard(),
-          RecentContactCard(),
-          RecentContactCard(),
-        ],
+        children: List.generate(userList.length, (index) => RecentContactCard(username: userList[index])),
       ),
     );
   }
