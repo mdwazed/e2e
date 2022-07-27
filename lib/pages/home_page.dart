@@ -1,5 +1,6 @@
 import 'package:e2e/pages/audio_call_page.dart';
 import 'package:e2e/pages/video_call_page.dart';
+import 'package:e2e/pages/video_page.dart';
 import "package:flutter/material.dart";
 
 import 'chat_page.dart';
@@ -69,8 +70,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         children: const [
           ChatPage(),
           AudioCallPage(),
-          VideoCallPage(),
-          // Padding(padding: EdgeInsets.all(0),)
+          //VideoCallPage(),
+          VideoPage()
         ],
       ),
     );

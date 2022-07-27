@@ -32,13 +32,14 @@ dependencies:
 
 
   # The following adds the Cupertino Icons font to your application.
+
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   socket_io_client: 2.0.0-beta.4-nullsafety.0
   openpgp: 2.0.1
   flutter_chat_bubble: 2.0.0
   expandable: ^5.0.1
-  flutter_webrtc: ^0.8.9
+  flutter_webrtc: ^0.8.10
   sdp_transform: ^0.3.2
   flutter_ringtone_player: ^3.2.0
   wakelock: ^0.6.2
