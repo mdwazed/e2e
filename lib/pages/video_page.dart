@@ -1,7 +1,9 @@
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:sdp_transform/sdp_transform.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/material.dart';
+import 'package:wakelock/wakelock.dart';
 
 class VideoPage extends StatefulWidget {
   const VideoPage({Key? key}) : super(key: key);
@@ -11,16 +13,19 @@ class VideoPage extends StatefulWidget {
 }
 
 class _VideoPageState extends State<VideoPage> {
-  bool _offer = false;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
 
   final sdpController = TextEditingController();
 
+  bool _offer = false;
+  bool _connected = false;
   bool _candidateSent = false;
   List logList = [];
+  bool _clickedCall = false;
+  bool _clickedCAnswer = false;
 
   IO.Socket socket = IO.io(
       'https://rt-comm-server.b664fshh19btg.eu-central-1.cs.amazonlightsail.com',
@@ -40,16 +45,56 @@ class _VideoPageState extends State<VideoPage> {
       });
     });
     socket.on('msg', (data) async {
-      if (data['type'] == 'answer' || data['type'] == 'offer') {
+      if (data['type'] == 'offer') {
+        _setRemoteDescription(data['sdp'], data['type']);
         setState(() {
           _offer = data['type'] == 'offer' ? true : false;
-          logList.insert(
-              0, data['type'] == 'offer' ? 'Incoming Call' : 'Replied to Call');
         });
+        if (_clickedCAnswer) {
+          _createAnswer();
+          setState(() {
+            _clickedCAnswer = false;
+          });
+        } else {
+          FlutterRingtonePlayer.playRingtone(volume: 10.0);
+        }
+      } else if (data['type'] == 'answer') {
         _setRemoteDescription(data['sdp'], data['type']);
+        if (_clickedCall) {
+          _createOffer();
+          setState(() {
+            _clickedCall = false;
+          });
+        }
       } else if (data['type'] == 'candidate' && !_offer) {
         _addCandidate(data['candidate']);
+      } else if (data['type'] == 'disconnect') {
+        _disconnect();
       }
+    });
+  }
+
+  _disconnect() {
+    setState(() {
+      _offer = false;
+      _connected = false;
+      _candidateSent = false;
+      logList = ['Call Disconnected By User'];
+      _clickedCall = false;
+      _clickedCAnswer = false;
+    });
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
+    _reRenderVideo();
+    _peerConnection?.close();
+  }
+
+  _reRenderVideo() {
+    _localRenderer = RTCVideoRenderer();
+    _remoteRenderer = RTCVideoRenderer();
+    initRenderer();
+    _createPeerConnection().then((pc) {
+      _peerConnection = pc;
     });
   }
 
@@ -59,6 +104,8 @@ class _VideoPageState extends State<VideoPage> {
     _remoteRenderer.dispose();
     sdpController.dispose();
     socket.disconnect();
+    _disconnect();
+    Wakelock.disable();
     super.dispose();
   }
 
@@ -69,6 +116,7 @@ class _VideoPageState extends State<VideoPage> {
     _createPeerConnection().then((pc) {
       _peerConnection = pc;
     });
+    Wakelock.enable();
     super.initState();
   }
 
@@ -109,7 +157,8 @@ class _VideoPageState extends State<VideoPage> {
 
     _localStream = await _getUserMedia();
 
-    RTCPeerConnection pc = await createPeerConnection(configuration, offerSdpConstraints);
+    RTCPeerConnection pc =
+        await createPeerConnection(configuration, offerSdpConstraints);
 
     pc.addStream(_localStream!);
 
@@ -132,7 +181,17 @@ class _VideoPageState extends State<VideoPage> {
 
     pc.onIceConnectionState = (e) {
       setState(() {
-        logList.add("onIceConnectionState ${e}");
+        if (e.name.toString() == "RTCIceConnectionStateChecking") {
+          logList.add('Trying to connect call...');
+        }
+        if (e.name.toString() == "RTCIceConnectionStateConnected") {
+          logList.add('Connected..!');
+          _connected = true;
+        }
+        if (e.name.toString() == "RTCIceConnectionStateDisconnected") {
+          logList.add('Disconnected :( ');
+          _connected = false;
+        }
       });
     };
 
@@ -176,7 +235,10 @@ class _VideoPageState extends State<VideoPage> {
             scrollDirection: Axis.vertical,
             child: Column(
               children: List.generate(logList.length, (index) {
-                return Text(logList[index], style: const TextStyle(color: Colors.white),);
+                return Text(
+                  logList[index],
+                  style: const TextStyle(color: Colors.white),
+                );
               }),
             ),
           ),
@@ -186,7 +248,8 @@ class _VideoPageState extends State<VideoPage> {
   }
 
   void _createOffer() async {
-    RTCSessionDescription description = await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
+    RTCSessionDescription description =
+        await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
     setState(() {
       logList.add("Calling The Connected User");
@@ -200,7 +263,8 @@ class _VideoPageState extends State<VideoPage> {
     setState(() {
       logList.add("Replying Answer for incoming call");
     });
-    RTCSessionDescription description = await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
+    RTCSessionDescription description =
+        await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
     var session = parse(description.sdp.toString());
     socket.emit('msg', {'type': 'answer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
@@ -213,7 +277,8 @@ class _VideoPageState extends State<VideoPage> {
   }
 
   void _addCandidate(session) async {
-    dynamic candidate = RTCIceCandidate(session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
+    dynamic candidate = RTCIceCandidate(
+        session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
     await _peerConnection!.addCandidate(candidate);
     setState(() {
       logList.add("ice candidate added");
@@ -239,16 +304,44 @@ class _VideoPageState extends State<VideoPage> {
         )
       ]));
 
-  Row offerAndAnswerButtons() => Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
-        !_offer
+  Row offerAndAnswerButtons() =>
+      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
+        _connected
             ? ElevatedButton(
-                onPressed: _createOffer,
-                child: const Text('Call'),
+                onPressed: () {
+                  _disconnect();
+                  socket.emit('msg', {
+                    'type': 'disconnect',
+                  });
+                },
+                child: const Text(
+                  'Disconnect',
+                ),
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.red,
+                ),
               )
-            : ElevatedButton(
-                onPressed: _createAnswer,
-                child: const Text('Answer'),
-                style: ElevatedButton.styleFrom(primary: Colors.amber),
-              ),
+            : !_offer
+                ? ElevatedButton(
+                    onPressed: () {
+                      _createOffer();
+                      setState(() {
+                        _clickedCall = true;
+                      });
+                    },
+                    child: const Text('Call'),
+                    // color: Colors.amber,
+                  )
+                : ElevatedButton(
+                    onPressed: () {
+                      _createAnswer();
+                      setState(() {
+                        _clickedCAnswer = true;
+                      });
+                      FlutterRingtonePlayer.stop();
+                    },
+                    child: const Text('Answer'),
+                    style: ElevatedButton.styleFrom(primary: Colors.amber),
+                  ),
       ]);
 }
