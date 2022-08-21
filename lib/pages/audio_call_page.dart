@@ -16,8 +16,8 @@ class AudioCallPage extends StatefulWidget {
 class _AudioCallPageState extends State<AudioCallPage> {
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
 
   bool _offer = false;
   bool _connected = false;
@@ -86,15 +86,23 @@ class _AudioCallPageState extends State<AudioCallPage> {
     });
     _localRenderer.dispose();
     _remoteRenderer.dispose();
-    // socket.disconnect();
+    _reRenderAudio();
     _peerConnection?.close();
+  }
+
+  _reRenderAudio(){
+    _localRenderer = RTCVideoRenderer();
+    _remoteRenderer = RTCVideoRenderer();
+    initRenderer();
     _createPeerConnection().then((pc) {
       _peerConnection = pc;
     });
   }
-
   @override
   dispose() {
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
+    // socket.disconnect();
     _disconnect();
     Wakelock.disable();
     super.dispose();
@@ -103,11 +111,15 @@ class _AudioCallPageState extends State<AudioCallPage> {
   @override
   void initState() {
     initRenderer();
+    _connect();
     _createPeerConnection().then((pc) {
       _peerConnection = pc;
     });
-    // _getUserMedia();
-    _connect();
+    if (socket.connected){
+      setState(() {
+        logList.add('connected ${socket.id}');
+      });
+    }
     Wakelock.enable();
     super.initState();
   }
@@ -120,7 +132,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
   _createPeerConnection() async {
     Map<String, dynamic> configuration = {
       "iceServers": [
-        // {"url": "stun:stun.l.google.com:19302"},
+        {"url": "stun:stun.l.google.com:19302"},
         {
           "urls": "turn:openrelay.metered.ca:80",
           "username": "openrelayproject",
@@ -142,7 +154,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
     final Map<String, dynamic> offerSdpConstraints = {
       "mandatory": {
         "OfferToReceiveAudio": true,
-        "OfferToReceiveVideo": true,
+        "OfferToReceiveVideo": false,
       },
       "optional": [],
     };
@@ -187,6 +199,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
     };
 
     pc.onAddStream = (stream) {
+      logList.add('addStream: ' + stream.id);
       _remoteRenderer.srcObject = stream;
     };
 
@@ -209,7 +222,6 @@ class _AudioCallPageState extends State<AudioCallPage> {
     RTCSessionDescription description =
         await _peerConnection!.createOffer({'offerToReceiveAudio': 1});
     var session = parse(description.sdp.toString());
-    // print(json.encode(session));
     socket.emit('msg', {'type': 'offer', 'sdp': session});
     _peerConnection!.setLocalDescription(description);
   }

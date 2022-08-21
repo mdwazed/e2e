@@ -103,7 +103,7 @@ class _VideoPageState extends State<VideoPage> {
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     sdpController.dispose();
-    socket.disconnect();
+    // socket.disconnect();
     _disconnect();
     Wakelock.disable();
     super.dispose();
@@ -116,6 +116,11 @@ class _VideoPageState extends State<VideoPage> {
     _createPeerConnection().then((pc) {
       _peerConnection = pc;
     });
+    if (socket.connected){
+      setState(() {
+        logList.add('connected ${socket.id}');
+      });
+    }
     Wakelock.enable();
     super.initState();
   }
@@ -218,6 +223,75 @@ class _VideoPageState extends State<VideoPage> {
     return stream;
   }
 
+  void _createOffer() async {
+    RTCSessionDescription description =
+        await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
+    var session = parse(description.sdp.toString());
+    socket.emit('msg', {'type': 'offer', 'sdp': session});
+    _peerConnection!.setLocalDescription(description);
+  }
+
+  void _createAnswer() async {
+    RTCSessionDescription description =
+        await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
+    var session = parse(description.sdp.toString());
+    socket.emit('msg', {'type': 'answer', 'sdp': session});
+    _peerConnection!.setLocalDescription(description);
+  }
+
+  void _setRemoteDescription(receivedSdp, type) async {
+    String sdp = write(receivedSdp, null);
+    RTCSessionDescription description = RTCSessionDescription(sdp, type);
+    await _peerConnection!.setRemoteDescription(description);
+  }
+
+  void _addCandidate(session) async {
+    dynamic candidate = RTCIceCandidate(
+        session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
+    await _peerConnection!.addCandidate(candidate);
+  }
+
+  Row offerAndAnswerButtons() =>
+      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
+        _connected
+            ? ElevatedButton(
+          onPressed: () {
+            _disconnect();
+            socket.emit('msg', {
+              'type': 'disconnect',
+            });
+          },
+          child: const Text(
+            'Disconnect',
+          ),
+          style: ElevatedButton.styleFrom(
+            primary: Colors.red,
+          ),
+        )
+            : !_offer
+            ? ElevatedButton(
+          onPressed: () {
+            _createOffer();
+            setState(() {
+              _clickedCall = true;
+            });
+          },
+          child: const Text('Call'),
+          // color: Colors.amber,
+        )
+            : ElevatedButton(
+          onPressed: () {
+            _createAnswer();
+            setState(() {
+              _clickedCAnswer = true;
+            });
+            FlutterRingtonePlayer.stop();
+          },
+          child: const Text('Answer'),
+          style: ElevatedButton.styleFrom(primary: Colors.amber),
+        ),
+      ]);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -247,44 +321,6 @@ class _VideoPageState extends State<VideoPage> {
     )));
   }
 
-  void _createOffer() async {
-    RTCSessionDescription description =
-        await _peerConnection!.createOffer({'offerToReceiveVideo': 1});
-    var session = parse(description.sdp.toString());
-    setState(() {
-      logList.add("Calling The Connected User");
-    });
-    socket.emit('msg', {'type': 'offer', 'sdp': session});
-    //_offer = true;
-    _peerConnection!.setLocalDescription(description);
-  }
-
-  void _createAnswer() async {
-    setState(() {
-      logList.add("Replying Answer for incoming call");
-    });
-    RTCSessionDescription description =
-        await _peerConnection!.createAnswer({'offerToReceiveVideo': 1});
-    var session = parse(description.sdp.toString());
-    socket.emit('msg', {'type': 'answer', 'sdp': session});
-    _peerConnection!.setLocalDescription(description);
-  }
-
-  void _setRemoteDescription(receivedSdp, type) async {
-    String sdp = write(receivedSdp, null);
-    RTCSessionDescription description = RTCSessionDescription(sdp, type);
-    await _peerConnection!.setRemoteDescription(description);
-  }
-
-  void _addCandidate(session) async {
-    dynamic candidate = RTCIceCandidate(
-        session['candidate'], session['sdpMid'], session['sdpMlineIndex']);
-    await _peerConnection!.addCandidate(candidate);
-    setState(() {
-      logList.add("ice candidate added");
-    });
-  }
-
   SizedBox videoRenderers() => SizedBox(
       height: 210,
       child: Row(children: [
@@ -303,45 +339,4 @@ class _VideoPageState extends State<VideoPage> {
               child: RTCVideoView(_remoteRenderer)),
         )
       ]));
-
-  Row offerAndAnswerButtons() =>
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: <Widget>[
-        _connected
-            ? ElevatedButton(
-                onPressed: () {
-                  _disconnect();
-                  socket.emit('msg', {
-                    'type': 'disconnect',
-                  });
-                },
-                child: const Text(
-                  'Disconnect',
-                ),
-                style: ElevatedButton.styleFrom(
-                  primary: Colors.red,
-                ),
-              )
-            : !_offer
-                ? ElevatedButton(
-                    onPressed: () {
-                      _createOffer();
-                      setState(() {
-                        _clickedCall = true;
-                      });
-                    },
-                    child: const Text('Call'),
-                    // color: Colors.amber,
-                  )
-                : ElevatedButton(
-                    onPressed: () {
-                      _createAnswer();
-                      setState(() {
-                        _clickedCAnswer = true;
-                      });
-                      FlutterRingtonePlayer.stop();
-                    },
-                    child: const Text('Answer'),
-                    style: ElevatedButton.styleFrom(primary: Colors.amber),
-                  ),
-      ]);
 }

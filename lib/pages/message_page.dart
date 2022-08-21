@@ -82,7 +82,7 @@ class _MessagePageState extends State<MessagePage> {
   void dispose() {
     // Clean up the controller when the widget is disposed.
     _controller.dispose();
-    socket.disconnect();
+    // socket.disconnect();
     print('disconnected');
     super.dispose();
   }
@@ -91,6 +91,11 @@ class _MessagePageState extends State<MessagePage> {
   void initState() {
     super.initState();
     _connect();
+    if (socket.connected) {
+      setState(() {
+        connState = 'Connected';
+      });
+    }
   }
 
   @override
