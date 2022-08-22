@@ -79,7 +79,7 @@ class _VideoPageState extends State<VideoPage> {
       _offer = false;
       _connected = false;
       _candidateSent = false;
-      logList = ['Call Disconnected By User'];
+      logList = ['Call Disconnected'];
       _clickedCall = false;
       _clickedCAnswer = false;
     });
@@ -195,13 +195,14 @@ class _VideoPageState extends State<VideoPage> {
         }
         if (e.name.toString() == "RTCIceConnectionStateDisconnected") {
           logList.add('Disconnected :( ');
-          _connected = false;
+          socket.emit('msg', { 'type': 'disconnect', });
+          _disconnect();
         }
       });
     };
 
     pc.onAddStream = (stream) {
-      logList.add('addStream: ' + stream.id);
+      // logList.add('addStream: ' + stream.id);
       _remoteRenderer.srcObject = stream;
     };
 

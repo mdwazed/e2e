@@ -80,7 +80,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
       _offer = false;
       _connected = false;
       _candidateSent = false;
-      logList = ['Call Disconnected By User'];
+      logList = ['Call Disconnected'];
       _clickedCall = false;
       _clickedCAnswer = false;
     });
@@ -193,13 +193,14 @@ class _AudioCallPageState extends State<AudioCallPage> {
         }
         if (e.name.toString() == "RTCIceConnectionStateDisconnected") {
           logList.add('Disconnected :( ');
-          _connected = false;
+          socket.emit('msg', { 'type': 'disconnect', });
+          _disconnect();
         }
       });
     };
 
     pc.onAddStream = (stream) {
-      logList.add('addStream: ' + stream.id);
+      // logList.add('addStream: ' + stream.id);
       _remoteRenderer.srcObject = stream;
     };
 
@@ -252,9 +253,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
             ? ElevatedButton(
                 onPressed: () {
                   _disconnect();
-                  socket.emit('msg', {
-                    'type': 'disconnect',
-                  });
+                  socket.emit('msg', { 'type': 'disconnect',  });
                 },
                 child: const Text(
                   'Disconnect',
